@@ -100,6 +100,9 @@ async def summarize_url(url: str) -> dict:
 
     严禁输出任何解释性、过渡性文字（如“基于网页内容…”、“我为您生成…”、“这是摘要：”等）。
     严禁使用引号包裹输出结果。
+    
+    下面是网页内容:
+    {html_text}
     """
 
     # 步骤 3：调用绑定了 Pydantic 的 LLM
@@ -110,5 +113,5 @@ async def summarize_url(url: str) -> dict:
 
 
 if __name__ == "__main__":
-    result = asyncio.run(summarize_url("https://geek-docs.com/python/python-ask-answer/741_python_how_to_validate_a_url_in_python_malformed_or_not.html"))
+    result = asyncio.run(summarize_url("https://blog.51cto.com/51ctoblog/14546620"))
     print(result)
