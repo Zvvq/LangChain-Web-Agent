@@ -3,6 +3,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 from click import prompt
 from langchain.agents import create_agent
+from langchain.agents.middleware import ToolCallLimitMiddleware
 from langchain_core.tools import tool
 from LLM.deepseek_chat import deepseek_llm
 
@@ -82,6 +83,7 @@ async def submit_final_result(summary: str, is_safe: bool) -> dict:
 deepseek_agent = create_agent(
     model=deepseek_llm,
     tools=[fetch_webpage_content],
+    middleware=[ToolCallLimitMiddleware(tool_limit=1)],
     system_prompt="""
     【角色设定】 你是一位资深的 SEO 优化师和社交媒体运营专家。你的任务是根据抓取到的网页正文，提取并撰写用于“短链接预览卡片（Link Preview）”的网页描述（Meta Description）。
     
