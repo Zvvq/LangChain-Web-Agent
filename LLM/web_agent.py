@@ -12,7 +12,7 @@ TIMEOUT_SECONDS = 10
 CHUNK_SIZE = 8192
 
 @tool
-async def get_webpage_summary(url: str) -> str:
+async def fetch_webpage_content(url: str) -> str:
     """传入URL，抓取网页正文，生成摘要"""
     try:
         timeout = aiohttp.ClientTimeout(total=TIMEOUT_SECONDS)
@@ -54,8 +54,7 @@ async def get_webpage_summary(url: str) -> str:
         if not text:
             return "错误：未能从网页提取到任何内容。"
 
-        content = text[:6000]
-        return f"网页正文（前6000字符）：{content}\n请基于以上内容生成摘要。"
+        return text[:6000]
 
     except asyncio.TimeoutError:
         return "网页抓取失败：请求超时，网页可能过大或网络不稳定。"
@@ -67,39 +66,39 @@ async def get_webpage_summary(url: str) -> str:
 
 deepseek_agent = create_agent(
     model=deepseek_llm,
-    tools=[get_webpage_summary],
-    system_prompt="你是一个网页摘要助手，可以帮助用户总结传入的url的内容，使用一句话总结网页内容"
+    tools=[fetch_webpage_content],
+    system_prompt=f"""
+    【角色设定】 你是一位资深的 SEO 优化师和社交媒体运营专家。你的任务是根据抓取到的网页正文，提取并撰写用于“短链接预览卡片（Link Preview）”的网页描述（Meta Description）。
+    
+    【核心要求】
+    
+    直接输出核心价值：不要使用任何汇报性质的引导语，例如“这篇博客文章介绍了”、“该网页展示了”、“本文主要讲述”等。直接用高度凝练的语言输出内容。
+    字数严格控制：描述必须控制在 30 到 80 个汉字之间，适合在手机屏幕上快速阅读。
+    语气风格：客观、专业、有吸引力，像是一个优质网站的官方介绍。
+    【示例参考】
+    
+    ❌ 错误输出（带废话）：这个网页是一篇教程，主要详细讲解了如何使用 Python 的正则表达式和 urllib.parse 模块来验证 URL 是否合法的方法。
+    
+    ✅ 正确输出（直接干练）：Python URL 验证指南：全面解析基于正则表达式与 urllib.parse 模块的 URL 格式检验与合法性验证完整实现方案。
+    
+    ❌ 错误输出（带废话）：这是一家卖咖啡豆的网站首页，上面展示了他们来自全球各地的精选咖啡豆，还有新用户的优惠折扣。
+    
+    ✅ 正确输出（直接干练）：探索全球精选单品咖啡豆。提供从原产地直采的新鲜烘焙咖啡，新客首单专享 8 折优惠，开启您的精品咖啡之旅。
+    
+    """
 )
 
 
 async def summarize_url(url: str) -> str:
     """调用 agent 对 URL 内容进行一句话总结。"""
-    prompt = f"""
-    【角色设定】 你是一位资深的 SEO 优化师和社交媒体运营专家。你的任务是根据抓取到的网页正文，提取并撰写用于“短链接预览卡片（Link Preview）”的网页描述（Meta Description）。
-
-【核心要求】
-
-直接输出核心价值：不要使用任何汇报性质的引导语，例如“这篇博客文章介绍了”、“该网页展示了”、“本文主要讲述”等。直接用高度凝练的语言输出内容。
-字数严格控制：描述必须控制在 30 到 80 个汉字之间，适合在手机屏幕上快速阅读。
-语气风格：客观、专业、有吸引力，像是一个优质网站的官方介绍。
-【示例参考】
-
-❌ 错误输出（带废话）：这个网页是一篇教程，主要详细讲解了如何使用 Python 的正则表达式和 urllib.parse 模块来验证 URL 是否合法的方法。
-
-✅ 正确输出（直接干练）：Python URL 验证指南：全面解析基于正则表达式与 urllib.parse 模块的 URL 格式检验与合法性验证完整实现方案。
-
-❌ 错误输出（带废话）：这是一家卖咖啡豆的网站首页，上面展示了他们来自全球各地的精选咖啡豆，还有新用户的优惠折扣。
-
-✅ 正确输出（直接干练）：探索全球精选单品咖啡豆。提供从原产地直采的新鲜烘焙咖啡，新客首单专享 8 折优惠，开启您的精品咖啡之旅。
-
-请根据以上规则，为以下提供的网页文本生成预览卡片描述：{url}"""
+    user_prompt = f"为以下提供的网页文本生成预览卡片描述：{url}"
 
     result = await deepseek_agent.ainvoke(
         {
             "messages": [
                 {
                     "role": "user",
-                    "content": prompt,
+                    "content": user_prompt,
                 }
             ]
         }
