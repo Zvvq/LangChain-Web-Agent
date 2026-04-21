@@ -64,10 +64,25 @@ async def fetch_webpage_content(url: str) -> str:
         return f"网页抓取失败：未知错误 - {str(e)}"
 
 
+
+@tool(return_direct=True)
+async def submit_final_result(summary: str, is_safe: bool) -> dict:
+    """
+    当您完成网页内容的抓取和分析后，必须且只能调用此工具来提交最终的摘要和安全检测结果。
+    summary: 网页的摘要描述（不要有任何前言后语）。
+    is_safe: 网页是否安全。
+    """
+    # 只要模型调用了这个工具，就会把这个字典直接丢给外面的 Java 服务！绝对不会有废话！
+    return {
+        "summary": summary,
+        "is_safe": is_safe
+    }
+
+
 deepseek_agent = create_agent(
     model=deepseek_llm,
     tools=[fetch_webpage_content],
-    system_prompt=f"""
+    system_prompt="""
     【角色设定】 你是一位资深的 SEO 优化师和社交媒体运营专家。你的任务是根据抓取到的网页正文，提取并撰写用于“短链接预览卡片（Link Preview）”的网页描述（Meta Description）。
     
     【核心要求】
@@ -84,6 +99,13 @@ deepseek_agent = create_agent(
     ❌ 错误输出（带废话）：这是一家卖咖啡豆的网站首页，上面展示了他们来自全球各地的精选咖啡豆，还有新用户的优惠折扣。
     
     ✅ 正确输出（直接干练）：探索全球精选单品咖啡豆。提供从原产地直采的新鲜烘焙咖啡，新客首单专享 8 折优惠，开启您的精品咖啡之旅。
+    
+    【输出格式绝对要求】
+
+    严禁输出任何解释性、过渡性文字（如“基于网页内容…”、“我为您生成…”、“这是摘要：”等）。
+    严禁使用引号包裹输出结果。
+    只能输出摘要正文本身，不要有任何多余的字符！
+    请严格以 JSON 格式输出你的结果，不要包含任何 markdown 标记（如 ```json），不要包含任何前言后语。 必须严格遵循以下 JSON 结构： {"summary": "这里填入你生成的摘要内容"}
     
     """
 )
@@ -103,6 +125,7 @@ async def summarize_url(url: str) -> str:
             ]
         }
     )
+    # return result
     return result["messages"][-1].content
 
 
@@ -111,4 +134,4 @@ async def main(url: str):
     print(summary)
 
 if __name__ == "__main__":
-    asyncio.run(main("https://blog.csdn.net/weixin_60925698/article/details/159695677"))
+    asyncio.run(main("https://blog.51cto.com/wochunyang/14554142"))
