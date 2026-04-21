@@ -1,4 +1,3 @@
-import os
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
@@ -71,18 +70,25 @@ deepseek_agent = create_agent(
     system_prompt="你是一个网页摘要助手，可以帮助用户总结传入的url的内容，使用一句话总结网页内容"
 )
 
-async def main(url: str):
+
+async def summarize_url(url: str) -> str:
+    """调用 agent 对 URL 内容进行一句话总结。"""
     result = await deepseek_agent.ainvoke(
         {
             "messages": [
                 {
                     "role": "user",
-                    "content": f"请帮我总结一下这个网页的内容：{url}"
+                    "content": f"请帮我总结一下这个网页的内容：{url}",
                 }
             ]
         }
     )
-    print(result["messages"][-1].content)
+    return result["messages"][-1].content
+
+
+async def main(url: str):
+    summary = await summarize_url(url)
+    print(summary)
 
 if __name__ == "__main__":
     asyncio.run(main("https://blog.csdn.net/weixin_60925698/article/details/159695677"))
